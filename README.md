@@ -46,6 +46,16 @@ npm install
 npm run build
 ```
 
+## Install via Skills Registry
+
+You can also install as a skill package using:
+
+```bash
+npx skills add web3sim/xlayer-uniswap-intent-guard --yes --global
+```
+
+Then use it in your agent runtime as a reusable skill.
+
 ## Run
 
 ```bash
