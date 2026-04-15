@@ -1,0 +1,16 @@
+{
+  "chain": "xlayer",
+  "wallet": "0x37df30b3085fd83df98c49102e62f3d9feadd678",
+  "fromToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "toToken": "0x74b7f16337b8972027f6196a17a631ac6de26d22",
+  "readableAmount": "0.001",
+  "maxSlippagePct": 0.01,
+  "maxPriceImpactPct": 0.05,
+  "minUsdOut": 99999,
+  "minRoutes": 99,
+  "dryRun": true,
+  "mevProtection": true,
+  "requireDexAllowlist": [
+    "uniswap"
+  ]
+}

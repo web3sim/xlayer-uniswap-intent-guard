@@ -9,6 +9,8 @@ export const IntentSchema = z.object({
   maxSlippagePct: z.number().positive().max(5).default(1),
   maxPriceImpactPct: z.number().positive().max(20).default(3),
   minUsdOut: z.number().positive().optional(),
+  minRoutes: z.number().int().min(0).default(0),
+  requireDexAllowlist: z.array(z.string()).optional(),
   dryRun: z.boolean().default(false),
   mevProtection: z.boolean().default(true)
 });
@@ -19,4 +21,13 @@ export type GuardDecision = {
   ok: boolean;
   reason?: string;
   checks: Record<string, { ok: boolean; value: string }>;
+};
+
+export type ExecutionReport = {
+  timestamp: string;
+  intent: Intent;
+  decision: GuardDecision;
+  quote: unknown;
+  executed: boolean;
+  tx?: unknown;
 };

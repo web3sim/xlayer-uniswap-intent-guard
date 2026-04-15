@@ -9,6 +9,8 @@ Intent-aware swap guard for X Layer.
 - max slippage
 - max price impact
 - minimum USD out
+- minimum route count (route sanity)
+- optional DEX allowlist check
 - dry-run mode
 - optional MEV protection on execution
 
@@ -18,7 +20,8 @@ It uses `onchainos` for quote + execute, so it works with real onchain routing.
 
 - Reusable agent primitive (Skill Arena fit)
 - Deterministic guardrails (safer than raw swap calls)
-- Ready to target **Best Uniswap integration** by plugging guard into Uniswap-based routes
+- Proof-first outputs (`reports/*.json`) for judges
+- Ready to target **Best Uniswap integration** by tightening allowlist + route policy
 
 ## Setup
 
@@ -34,11 +37,14 @@ Prerequisite:
 ## Run
 
 ```bash
-# dry-run policy check
-node dist/cli.js examples/intent.sample.json
+# safe dry-run
+npm run demo:safe
 
-# dev mode
-npm run dev -- examples/intent.sample.json
+# unsafe dry-run (should block)
+npm run demo:unsafe
+
+# generic
+node dist/cli.js examples/intent.safe.json
 ```
 
 ## Intent schema
@@ -53,17 +59,21 @@ npm run dev -- examples/intent.sample.json
   "maxSlippagePct": 1,
   "maxPriceImpactPct": 3,
   "minUsdOut": 5,
+  "minRoutes": 1,
+  "requireDexAllowlist": ["uniswap"],
   "dryRun": true,
   "mevProtection": true
 }
 ```
 
-## Expected flow
+## Reports
 
-1. Fetch quote from `onchainos swap quote`
-2. Evaluate checks
-3. Block or execute (`onchainos swap execute`)
-4. Return decision + tx output
+Each run writes a judge-auditable report JSON under `reports/`:
+
+- intent
+- quote payload
+- pass/fail decision per check
+- execution output when executed
 
 ## Test
 
