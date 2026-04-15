@@ -35,6 +35,58 @@ export async function getQuote(params: {
   ]);
 }
 
+export async function getSwapTxData(params: {
+  chain: string;
+  wallet: string;
+  fromToken: string;
+  toToken: string;
+  readableAmount: string;
+  slippage: number;
+}) {
+  return runOnchainos([
+    "swap",
+    "swap",
+    "--chain",
+    params.chain,
+    "--wallet",
+    params.wallet,
+    "--from",
+    params.fromToken,
+    "--to",
+    params.toToken,
+    "--readable-amount",
+    params.readableAmount,
+    "--slippage",
+    params.slippage.toString(),
+    "--gas-level",
+    "average"
+  ]);
+}
+
+export async function simulateTx(params: {
+  chain: string;
+  from: string;
+  to: string;
+  data: string;
+  amount?: string;
+}) {
+  const args = [
+    "gateway",
+    "simulate",
+    "--chain",
+    params.chain,
+    "--from",
+    params.from,
+    "--to",
+    params.to,
+    "--data",
+    params.data,
+    "--amount",
+    params.amount ?? "0"
+  ];
+  return runOnchainos(args);
+}
+
 export async function executeSwap(params: {
   chain: string;
   wallet: string;
@@ -43,6 +95,7 @@ export async function executeSwap(params: {
   readableAmount: string;
   slippage: number;
   mevProtection: boolean;
+  gasLevel?: "slow" | "average" | "fast";
 }) {
   const args = [
     "swap",
@@ -60,7 +113,7 @@ export async function executeSwap(params: {
     "--slippage",
     params.slippage.toString(),
     "--gas-level",
-    "average"
+    params.gasLevel ?? "average"
   ];
   if (params.mevProtection) args.push("--mev-protection");
   return runOnchainos(args);

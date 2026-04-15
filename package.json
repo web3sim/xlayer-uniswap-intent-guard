@@ -1,8 +1,9 @@
 {
   "name": "xlayer-uniswap-intent-guard",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Intent-aware swap guard for X Layer using OnchainOS + Uniswap routing",
   "type": "module",
+  "main": "dist/index.js",
   "bin": {
     "intent-guard": "dist/cli.js"
   },
@@ -11,6 +12,7 @@
     "dev": "tsx src/cli.ts",
     "demo:safe": "tsx src/cli.ts examples/intent.safe.json",
     "demo:unsafe": "tsx src/cli.ts examples/intent.unsafe.json",
+    "demo:all": "npm run demo:safe && npm run demo:unsafe || true",
     "test": "vitest run",
     "lint": "tsc -p tsconfig.json --noEmit"
   },

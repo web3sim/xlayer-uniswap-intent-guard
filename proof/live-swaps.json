@@ -1,0 +1,15 @@
+{
+  "chain": "xlayer",
+  "wallet": "0x37df30b3085fd83df98c49102e62f3d9feadd678",
+  "pair": "OKB->USDC",
+  "txHashes": [
+    "0xb3fa57d5fab02129acfea851d37f05e8f665430d9f80c78b53c4ec2f4a44cd0b",
+    "0x08f92809647cd0e304321041dab03ba74c750daf89d1e0bda0f6ed54205bc45f",
+    "0x0826dafc1315f0d6332b5a195bb9b0fae3d0823594ebf4c0de6a135cd91d1c77"
+  ],
+  "explorerLinks": [
+    "https://www.okx.com/web3/explorer/xlayer/tx/0xb3fa57d5fab02129acfea851d37f05e8f665430d9f80c78b53c4ec2f4a44cd0b",
+    "https://www.okx.com/web3/explorer/xlayer/tx/0x08f92809647cd0e304321041dab03ba74c750daf89d1e0bda0f6ed54205bc45f",
+    "https://www.okx.com/web3/explorer/xlayer/tx/0x0826dafc1315f0d6332b5a195bb9b0fae3d0823594ebf4c0de6a135cd91d1c77"
+  ]
+}

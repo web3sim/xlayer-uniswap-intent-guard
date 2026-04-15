@@ -1,0 +1,8 @@
+{
+  "scenario": "unsafe-intent-dry-run",
+  "expected": "blocked",
+  "evidence": {
+    "summary": "BLOCK",
+    "blockedBy": ["routeCount", "dexAllowlist", "requireField:slippage", "requireField:priceImpact", "requireField:usdOut"]
+  }
+}

@@ -1,68 +1,62 @@
 ---
 name: xlayer-uniswap-intent-guard
-description: Intent-aware guard for X Layer swaps. Use when an agent needs to validate swap safety (slippage, price impact, min USD out, route sanity) before executing through onchainos swap.
-version: 0.2.0
+description: Policy-enforced X Layer swap guard. Use for safe agent swap execution with presets, simulation gate, strict allowlists, replay protection, budgets, and auditable reports.
+version: 1.0.0
 ---
 
 # X Layer Uniswap Intent Execution Guard
 
 ## Use when
+- Agent needs guarded swap execution on X Layer
+- You need deterministic pass/block decisions before swap
+- You need auditable outputs for judges/compliance
 
-- User asks for safe swap execution on X Layer
-- You need deterministic pre-trade policy checks
-- You want to block high-risk routes before onchain execution
+## Modes
+- **CLI**: `node dist/cli.js <intent.json>`
+- **SDK**: `runIntent(intent)` for app integration
 
-## Preconditions
-
-1. `onchainos` installed
-2. Wallet logged in (`onchainos wallet status`)
-3. Intent JSON prepared
-
-## Command
-
-```bash
-node dist/cli.js <intent.json>
-```
+## Mandatory pipeline
+1. Parse + apply preset (`safe|balanced|aggressive`)
+2. Quote fetch (`swap quote`)
+3. Guard evaluation (policy checks)
+4. Budget + replay checks
+5. Simulation gate (`swap swap` + `gateway simulate`)
+6. Execute (or dry-run)
+7. Persist report (`reports/*.json`)
 
 ## Policy checks
+- slippage, price impact, minUsdOut, maxNotionalUsd
+- routeCount, maxHops
+- dex allowlist + strict allowlist mode
+- token denylist
+- required quote fields
+- price deviation vs spot
+- from/to distinct
 
-- `maxSlippagePct`
-- `maxPriceImpactPct`
-- `minUsdOut` (optional)
-- `minRoutes` (route sanity)
-- `requireDexAllowlist` (optional)
-- `strictDexAllowlist` (enforce all routes in allowlist)
-- `denyTokens` (optional)
-- `maxNotionalUsd` (optional)
-- `requireQuoteFields` (strict quote completeness)
+## Governance checks
+- `intentId` replay protection
+- wallet daily notional cap
+- wallet daily tx-count cap
 
-If any check fails, command exits with code `2` and **does not execute**.
+## Execution controls
+- `mevMode`: `auto | force | off`
+- `fallbackExecution`: one bounded retry with faster gas
+- `simulateBeforeExecute`: hard gate on simulation
 
-## Files
-
-- `src/cli.ts` – orchestration + report writing
-- `src/guard.ts` – risk checks
-- `src/onchainos.ts` – onchainos integration
-- `examples/intent.safe.json` – pass scenario
-- `examples/intent.unsafe.json` – blocked scenario
-
-## Demo flow
-
+## Demo commands
 ```bash
 npm run demo:safe
 npm run demo:unsafe
+npm run demo:all
 ```
 
-Collect proof from `reports/*.json`.
-
-## Error handling
-
-- Quote command failure → stop and show onchainos error
-- Guard failure → block trade and return reason
-- Execute failure → return onchainos error (no retries by default)
+## Proof artifacts
+- `PROOF.md`
+- `proof/live-swaps.json`
+- `proof/guard-safe-proof.json`
+- `proof/guard-unsafe-proof.json`
 
 ## Extension points
-
-- Add token allowlist / denylist checks
-- Add volatility/risk oracle checks
-- Add stricter Uniswap-route constraints (pool depth, fee tiers)
+- enforce Uniswap fee-tier constraints
+- add TWAP oracle source for stronger deviation checks
+- add webhook notifier for blocked intents

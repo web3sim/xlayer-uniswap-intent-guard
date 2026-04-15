@@ -32,15 +32,32 @@ function summarize(checks: GuardDecision["checks"], riskScore: number, ok: boole
   return `BLOCK: ${failed.join(", ")}. riskScore=${riskScore}`;
 }
 
-export function evaluateIntent(intent: Intent, quote: any): GuardDecision {
+export function evaluateIntent(intent: Intent, quoteRaw: any): GuardDecision {
   const checks: GuardDecision["checks"] = {};
 
-  const data = quote?.data ?? quote;
+  const quote = quoteRaw?.data?.[0] ?? quoteRaw?.data ?? quoteRaw;
+  const data = quote?.routerResult ?? quote;
+
   const priceImpact = pickNumber(data, ["priceImpactPct", "priceImpact", "impact", "price_impact", "priceImpactPercent"]);
-  const usdOut = pickNumber(data, ["toTokenUsdValue", "estimatedOutUsd", "outUsd", "toUsd"]);
+  const usdOut = pickNumber(data, ["toTokenUsdValue", "estimatedOutUsd", "outUsd", "toUsd"]) ??
+    (() => {
+      const amount = pickNumber(data, ["toTokenAmount", "outAmount", "toAmount", "amountOut"]);
+      const price = pickNumber(data?.toToken, ["tokenUnitPrice"]);
+      const decimals = pickNumber(data?.toToken, ["decimal"]) ?? 0;
+      if (amount === undefined || price === undefined) return undefined;
+      return (amount / 10 ** decimals) * price;
+    })();
   const autoSlippage = pickNumber(data, ["slippage", "autoSlippage", "slippagePct"]);
   const amountOut = pickNumber(data, ["toTokenAmount", "outAmount", "toAmount", "amountOut"]);
-  const notionalInUsd = pickNumber(data, ["fromTokenUsdValue", "inUsd", "fromUsd"]);
+  const notionalInUsd = pickNumber(data, ["fromTokenUsdValue", "inUsd", "fromUsd"]) ??
+    (() => {
+      const amount = pickNumber(data, ["fromTokenAmount", "inAmount", "amountIn"]);
+      const price = pickNumber(data?.fromToken, ["tokenUnitPrice"]);
+      const decimals = pickNumber(data?.fromToken, ["decimal"]) ?? 0;
+      if (amount === undefined || price === undefined) return undefined;
+      return (amount / 10 ** decimals) * price;
+    })();
+
   const routes = pickArray(data, ["routes", "route", "paths", "path", "dexRouterList"]);
 
   checks.quoteData = { ok: !!data, value: data ? "quote data present" : "quote data missing" };
@@ -79,12 +96,34 @@ export function evaluateIntent(intent: Intent, quote: any): GuardDecision {
   const routeCount = routes?.length ?? 0;
   checks.routeCount = { ok: routeCount >= intent.minRoutes, value: `${routeCount} >= ${intent.minRoutes}` };
 
+  if (intent.maxHops !== undefined) {
+    checks.maxHops = { ok: routeCount <= intent.maxHops, value: `${routeCount} <= ${intent.maxHops}` };
+  }
+
+  // price deviation estimate vs spot
+  const fromPrice = pickNumber(data?.fromToken, ["tokenUnitPrice"]);
+  const toPrice = pickNumber(data?.toToken, ["tokenUnitPrice"]);
+  const fromAmountRaw = pickNumber(data, ["fromTokenAmount"]);
+  const fromDec = pickNumber(data?.fromToken, ["decimal"]) ?? 0;
+  const toAmountRaw = pickNumber(data, ["toTokenAmount"]);
+  const toDec = pickNumber(data?.toToken, ["decimal"]) ?? 0;
+  if (intent.maxPriceDeviationPct !== undefined && fromPrice && toPrice && fromAmountRaw && toAmountRaw) {
+    const fromAmt = fromAmountRaw / 10 ** fromDec;
+    const toAmt = toAmountRaw / 10 ** toDec;
+    const expectedToBySpot = (fromAmt * fromPrice) / toPrice;
+    const deviationPct = Math.abs((expectedToBySpot - toAmt) / expectedToBySpot) * 100;
+    checks.maxPriceDeviationPct = {
+      ok: deviationPct <= intent.maxPriceDeviationPct,
+      value: `${deviationPct.toFixed(4)}% <= ${intent.maxPriceDeviationPct}%`
+    };
+  }
+
   if (intent.requireDexAllowlist?.length) {
     const allow = intent.requireDexAllowlist.map((x) => x.toLowerCase());
     const dexNames = (routes ?? [])
       .map((r: any) => (r?.dex ?? r?.dexName ?? r?.name ?? r?.dexProtocol?.dexName ?? "").toString().toLowerCase())
       .filter(Boolean);
-    const hits = dexNames.filter((d) => allow.includes(d));
+    const hits = dexNames.filter((d) => allow.some((a) => d.includes(a)));
 
     checks.dexAllowlist = {
       ok: hits.length > 0,
@@ -92,7 +131,7 @@ export function evaluateIntent(intent: Intent, quote: any): GuardDecision {
     };
 
     if (intent.strictDexAllowlist && dexNames.length > 0) {
-      const disallowed = dexNames.filter((d) => !allow.includes(d));
+      const disallowed = dexNames.filter((d) => !allow.some((a) => d.includes(a)));
       checks.strictDexAllowlist = {
         ok: disallowed.length === 0,
         value: disallowed.length ? `disallowed=${disallowed.join(",")}` : "all routes allowlisted"

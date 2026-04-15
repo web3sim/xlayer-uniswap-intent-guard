@@ -1,0 +1,9 @@
+{
+  "scenario": "safe-intent-dry-run",
+  "expected": "pass",
+  "evidence": {
+    "riskScore": 0,
+    "summary": "PASS",
+    "checks": ["slippage", "priceImpact", "routeCount"]
+  }
+}

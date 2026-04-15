@@ -1,96 +1,118 @@
-# X Layer Uniswap Intent Execution Guard (Skill Arena)
+# X Layer Uniswap Intent Execution Guard
 
-Intent-aware swap guard for X Layer.
+Production-grade SkillArena module for policy-enforced swaps on X Layer.
 
-## What it does
+## What makes this submission strong
 
-`intent-guard` enforces policy checks before executing swaps:
+- Real onchain proofs (3 live tx hashes)
+- Policy presets (`safe`, `balanced`, `aggressive`)
+- Strict guardrails + deterministic blocks
+- Pre-execution simulation gate (`swap swap` + `gateway simulate`)
+- Replay protection (`intentId` dedupe)
+- Per-wallet daily budgets (USD + tx count)
+- Auto fallback execution (fast gas + bounded slippage bump)
+- SDK + CLI modes
+- Report-first artifacts (`reports/*.json`)
 
-- max slippage
-- max price impact
-- minimum USD out
-- minimum route count (route sanity)
-- optional DEX allowlist check
-- strict allowlist mode (`strictDexAllowlist`)
+## Core Features
+
+### 1) Policy & Safety
+- max slippage / max price impact
+- min USD out / max notional USD
+- route count + hop limits
+- DEX allowlist + strict allowlist mode
 - token denylist
-- max notional USD cap
 - strict required quote fields
-- dry-run mode
-- optional MEV protection on execution
+- price deviation check vs spot
 
-It uses `onchainos` for quote + execute, so it works with real onchain routing.
+### 2) Execution Reliability
+- simulation gate before execute
+- MEV mode selector: `auto | force | off`
+- fallback execution path on failure
+- explorer links in execution report
 
-## Why this is competition-grade
+### 3) Governance Controls
+- anti-replay via `intentId`
+- per-wallet daily risk budgets:
+  - `maxDailyNotionalUsd`
+  - `maxDailyTxCount`
 
-- Reusable agent primitive (Skill Arena fit)
-- Deterministic guardrails (safer than raw swap calls)
-- Proof-first outputs (`reports/*.json`) for judges
-- Ready to target **Best Uniswap integration** by tightening allowlist + route policy
-
-## Setup
+## Install
 
 ```bash
+git clone https://github.com/web3sim/xlayer-uniswap-intent-guard.git
+cd xlayer-uniswap-intent-guard
 npm install
 npm run build
 ```
 
-Prerequisite:
-
-- `onchainos` installed and wallet logged in (`onchainos wallet status`)
-
 ## Run
 
 ```bash
-# safe dry-run
+# pass scenario
 npm run demo:safe
 
-# unsafe dry-run (should block)
+# blocked scenario
 npm run demo:unsafe
 
-# generic
-node dist/cli.js examples/intent.safe.json
+# combined demo
+npm run demo:all
 ```
 
-## Intent schema
+## SDK Usage
+
+```ts
+import { runIntent } from "xlayer-uniswap-intent-guard";
+
+const { reportFile, report } = await runIntent({
+  intentId: "trade-001",
+  chain: "xlayer",
+  wallet: "0x...",
+  fromToken: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  toToken: "0x74b7f16337b8972027f6196a17a631ac6de26d22",
+  readableAmount: "0.001",
+  preset: "balanced",
+  dryRun: true
+});
+```
+
+## Input Schema Highlights
 
 ```json
 {
-  "chain": "xlayer",
-  "wallet": "0x...",
-  "fromToken": "0x...",
-  "toToken": "0x...",
-  "readableAmount": "0.1",
-  "maxSlippagePct": 1,
-  "maxPriceImpactPct": 3,
+  "intentId": "trade-001",
+  "preset": "safe",
+  "maxSlippagePct": 0.5,
+  "maxPriceImpactPct": 1,
   "minUsdOut": 5,
+  "maxNotionalUsd": 200,
   "minRoutes": 1,
+  "maxHops": 3,
   "requireDexAllowlist": ["uniswap"],
   "strictDexAllowlist": true,
   "denyTokens": ["0xdead..."],
-  "maxNotionalUsd": 500,
   "requireQuoteFields": ["slippage", "priceImpact", "usdOut"],
-  "dryRun": true,
-  "mevProtection": true
+  "maxDailyNotionalUsd": 500,
+  "maxDailyTxCount": 10,
+  "simulateBeforeExecute": true,
+  "fallbackExecution": true,
+  "mevMode": "auto",
+  "dryRun": false
 }
 ```
 
-## Reports
+## Proof
 
-Each run writes a judge-auditable report JSON under `reports/`:
+- `PROOF.md` — live tx + reproducible commands
+- `proof/live-swaps.json` — 3 onchain tx hashes
+- `proof/guard-safe-proof.json`
+- `proof/guard-unsafe-proof.json`
 
-- intent
-- quote payload
-- pass/fail decision per check
-- computed `riskScore` (0-100)
-- execution output when executed
-
-## Test
+## Validation
 
 ```bash
 npm test
+npm run demo:all
 ```
 
-
-## Live Proof
-
-- See [`PROOF.md`](./PROOF.md) for 3 real onchain swap tx hashes and reproducible commands.
+All outputs are persisted under `reports/*.json` (gitignored local artifacts).
