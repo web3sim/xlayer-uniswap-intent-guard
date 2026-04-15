@@ -87,3 +87,8 @@ Each run writes a judge-auditable report JSON under `reports/`:
 ```bash
 npm test
 ```
+
+
+## Live Proof
+
+- See [`PROOF.md`](./PROOF.md) for 3 real onchain swap tx hashes and reproducible commands.
