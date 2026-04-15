@@ -13,7 +13,8 @@ const baseIntent = {
   minRoutes: 1,
   requireQuoteFields: ["slippage", "priceImpact", "usdOut"],
   dryRun: true,
-  mevProtection: true
+  mevProtection: true,
+  strictDexAllowlist: false
 } as const;
 
 describe("evaluateIntent", () => {
@@ -29,6 +30,7 @@ describe("evaluateIntent", () => {
     });
     expect(d.ok).toBe(true);
     expect(d.riskScore).toBe(0);
+    expect(d.summary.startsWith("PASS")).toBe(true);
   });
 
   it("blocks high price impact", () => {
@@ -57,5 +59,19 @@ describe("evaluateIntent", () => {
     });
     expect(d.ok).toBe(false);
     expect(d.reason).toContain("denyTokens");
+  });
+
+  it("blocks when strict allowlist has non-allowlisted route", () => {
+    const d = evaluateIntent({ ...(baseIntent as any), requireDexAllowlist: ["uniswap"], strictDexAllowlist: true }, {
+      data: {
+        slippage: 0.1,
+        priceImpactPct: 0.1,
+        estimatedOutUsd: 12,
+        outAmount: 100,
+        routes: [{ dex: "uniswap" }, { dex: "quickswap" }]
+      }
+    });
+    expect(d.ok).toBe(false);
+    expect(d.reason).toContain("strictDexAllowlist");
   });
 });

@@ -11,6 +11,7 @@ Intent-aware swap guard for X Layer.
 - minimum USD out
 - minimum route count (route sanity)
 - optional DEX allowlist check
+- strict allowlist mode (`strictDexAllowlist`)
 - token denylist
 - max notional USD cap
 - strict required quote fields
@@ -64,6 +65,7 @@ node dist/cli.js examples/intent.safe.json
   "minUsdOut": 5,
   "minRoutes": 1,
   "requireDexAllowlist": ["uniswap"],
+  "strictDexAllowlist": true,
   "denyTokens": ["0xdead..."],
   "maxNotionalUsd": 500,
   "requireQuoteFields": ["slippage", "priceImpact", "usdOut"],

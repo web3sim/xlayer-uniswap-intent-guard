@@ -18,5 +18,6 @@
     "priceImpact",
     "usdOut"
   ],
-  "denyTokens": []
+  "denyTokens": [],
+  "strictDexAllowlist": true
 }

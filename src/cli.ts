@@ -38,6 +38,7 @@ async function main() {
   console.log("[2/3] Evaluating guardrails...");
   const decision = evaluateIntent(intent, quote);
   console.log(JSON.stringify({ decision }, null, 2));
+  console.log(`[SUMMARY] ${decision.summary}`);
 
   if (!decision.ok) {
     const reportFile = await writeReport({

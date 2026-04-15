@@ -11,5 +11,6 @@
   "dryRun": true,
   "mevProtection": true,
   "requireQuoteFields": [],
-  "denyTokens": []
+  "denyTokens": [],
+  "strictDexAllowlist": false
 }

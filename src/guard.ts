@@ -21,26 +21,29 @@ function pickArray(source: any, keys: string[]): unknown[] | undefined {
 function scoreFromChecks(checks: GuardDecision["checks"]) {
   const failed = Object.values(checks).filter((c) => !c.ok).length;
   const total = Math.max(Object.keys(checks).length, 1);
-  // 0 = safest, 100 = worst
   return Math.round((failed / total) * 100);
+}
+
+function summarize(checks: GuardDecision["checks"], riskScore: number, ok: boolean) {
+  const failed = Object.entries(checks)
+    .filter(([, c]) => !c.ok)
+    .map(([k]) => k);
+  if (ok) return `PASS: all ${Object.keys(checks).length} checks passed. riskScore=${riskScore}`;
+  return `BLOCK: ${failed.join(", ")}. riskScore=${riskScore}`;
 }
 
 export function evaluateIntent(intent: Intent, quote: any): GuardDecision {
   const checks: GuardDecision["checks"] = {};
 
   const data = quote?.data ?? quote;
-  const priceImpact = pickNumber(data, ["priceImpactPct", "priceImpact", "impact", "price_impact"]);
+  const priceImpact = pickNumber(data, ["priceImpactPct", "priceImpact", "impact", "price_impact", "priceImpactPercent"]);
   const usdOut = pickNumber(data, ["toTokenUsdValue", "estimatedOutUsd", "outUsd", "toUsd"]);
   const autoSlippage = pickNumber(data, ["slippage", "autoSlippage", "slippagePct"]);
   const amountOut = pickNumber(data, ["toTokenAmount", "outAmount", "toAmount", "amountOut"]);
   const notionalInUsd = pickNumber(data, ["fromTokenUsdValue", "inUsd", "fromUsd"]);
-  const routes = pickArray(data, ["routes", "route", "paths", "path"]);
+  const routes = pickArray(data, ["routes", "route", "paths", "path", "dexRouterList"]);
 
-  checks.quoteData = {
-    ok: !!data,
-    value: data ? "quote data present" : "quote data missing"
-  };
-
+  checks.quoteData = { ok: !!data, value: data ? "quote data present" : "quote data missing" };
   checks.fromToDistinct = {
     ok: intent.fromToken.toLowerCase() !== intent.toToken.toLowerCase(),
     value: `${intent.fromToken} != ${intent.toToken}`
@@ -49,66 +52,54 @@ export function evaluateIntent(intent: Intent, quote: any): GuardDecision {
   if (intent.denyTokens?.length) {
     const deny = intent.denyTokens.map((x) => x.toLowerCase());
     const hit = [intent.fromToken.toLowerCase(), intent.toToken.toLowerCase()].find((t) => deny.includes(t));
-    checks.denyTokens = {
-      ok: !hit,
-      value: hit ? `blocked token ${hit}` : "no denylist token used"
-    };
+    checks.denyTokens = { ok: !hit, value: hit ? `blocked token ${hit}` : "no denylist token used" };
   }
 
-  checks.amountOut = {
-    ok: amountOut === undefined ? true : amountOut > 0,
-    value: amountOut === undefined ? "N/A" : `${amountOut} > 0`
-  };
-
+  checks.amountOut = { ok: amountOut === undefined ? true : amountOut > 0, value: amountOut === undefined ? "N/A" : `${amountOut} > 0` };
   checks.slippage = {
     ok: autoSlippage === undefined ? true : autoSlippage <= intent.maxSlippagePct,
     value: autoSlippage === undefined ? "N/A" : `${autoSlippage}% <= ${intent.maxSlippagePct}%`
   };
-
   checks.priceImpact = {
     ok: priceImpact === undefined ? true : priceImpact <= intent.maxPriceImpactPct,
     value: priceImpact === undefined ? "N/A" : `${priceImpact}% <= ${intent.maxPriceImpactPct}%`
   };
-
   checks.minUsdOut = {
     ok: intent.minUsdOut === undefined || usdOut === undefined ? true : usdOut >= intent.minUsdOut,
-    value:
-      intent.minUsdOut === undefined
-        ? "No minimum set"
-        : usdOut === undefined
-          ? "N/A"
-          : `$${usdOut.toFixed(4)} >= $${intent.minUsdOut.toFixed(4)}`
+    value: intent.minUsdOut === undefined ? "No minimum set" : usdOut === undefined ? "N/A" : `$${usdOut.toFixed(4)} >= $${intent.minUsdOut.toFixed(4)}`
   };
 
   if (intent.maxNotionalUsd !== undefined) {
     checks.maxNotionalUsd = {
       ok: notionalInUsd === undefined ? true : notionalInUsd <= intent.maxNotionalUsd,
-      value:
-        notionalInUsd === undefined
-          ? "N/A"
-          : `$${notionalInUsd.toFixed(4)} <= $${intent.maxNotionalUsd.toFixed(4)}`
+      value: notionalInUsd === undefined ? "N/A" : `$${notionalInUsd.toFixed(4)} <= $${intent.maxNotionalUsd.toFixed(4)}`
     };
   }
 
   const routeCount = routes?.length ?? 0;
-  checks.routeCount = {
-    ok: routeCount >= intent.minRoutes,
-    value: `${routeCount} >= ${intent.minRoutes}`
-  };
+  checks.routeCount = { ok: routeCount >= intent.minRoutes, value: `${routeCount} >= ${intent.minRoutes}` };
 
   if (intent.requireDexAllowlist?.length) {
-    const dexNames = (routes ?? [])
-      .map((r: any) => (r?.dex ?? r?.dexName ?? r?.name ?? "").toString().toLowerCase())
-      .filter(Boolean);
     const allow = intent.requireDexAllowlist.map((x) => x.toLowerCase());
+    const dexNames = (routes ?? [])
+      .map((r: any) => (r?.dex ?? r?.dexName ?? r?.name ?? r?.dexProtocol?.dexName ?? "").toString().toLowerCase())
+      .filter(Boolean);
     const hits = dexNames.filter((d) => allow.includes(d));
+
     checks.dexAllowlist = {
       ok: hits.length > 0,
       value: `matched=${hits.join(",") || "none"}; allow=${allow.join(",")}`
     };
+
+    if (intent.strictDexAllowlist && dexNames.length > 0) {
+      const disallowed = dexNames.filter((d) => !allow.includes(d));
+      checks.strictDexAllowlist = {
+        ok: disallowed.length === 0,
+        value: disallowed.length ? `disallowed=${disallowed.join(",")}` : "all routes allowlisted"
+      };
+    }
   }
 
-  // strict quote completeness requirements
   const availability: Record<string, boolean> = {
     slippage: autoSlippage !== undefined,
     priceImpact: priceImpact !== undefined,
@@ -116,15 +107,13 @@ export function evaluateIntent(intent: Intent, quote: any): GuardDecision {
     amountOut: amountOut !== undefined
   };
   for (const f of intent.requireQuoteFields) {
-    checks[`requireField:${f}`] = {
-      ok: availability[f],
-      value: availability[f] ? `${f} present` : `${f} missing`
-    };
+    checks[`requireField:${f}`] = { ok: availability[f], value: availability[f] ? `${f} present` : `${f} missing` };
   }
 
   const failed = Object.entries(checks).find(([, v]) => !v.ok);
   const riskScore = scoreFromChecks(checks);
-  if (failed) return { ok: false, reason: `${failed[0]} check failed`, checks, riskScore };
+  const summary = summarize(checks, riskScore, !failed);
+  if (failed) return { ok: false, reason: `${failed[0]} check failed`, checks, riskScore, summary };
 
-  return { ok: true, checks, riskScore };
+  return { ok: true, checks, riskScore, summary };
 }

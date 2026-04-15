@@ -31,6 +31,7 @@ node dist/cli.js <intent.json>
 - `minUsdOut` (optional)
 - `minRoutes` (route sanity)
 - `requireDexAllowlist` (optional)
+- `strictDexAllowlist` (enforce all routes in allowlist)
 - `denyTokens` (optional)
 - `maxNotionalUsd` (optional)
 - `requireQuoteFields` (strict quote completeness)

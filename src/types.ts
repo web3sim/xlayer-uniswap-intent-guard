@@ -12,6 +12,7 @@ export const IntentSchema = z.object({
   maxNotionalUsd: z.number().positive().optional(),
   minRoutes: z.number().int().min(0).default(0),
   requireDexAllowlist: z.array(z.string()).optional(),
+  strictDexAllowlist: z.boolean().default(false),
   denyTokens: z.array(z.string()).optional(),
   requireQuoteFields: z.array(z.enum(["slippage","priceImpact","usdOut","amountOut"])).default(["slippage","priceImpact","usdOut"]),
   dryRun: z.boolean().default(false),
@@ -24,6 +25,7 @@ export type GuardDecision = {
   ok: boolean;
   reason?: string;
   riskScore: number;
+  summary: string;
   checks: Record<string, { ok: boolean; value: string }>;
 };
 
