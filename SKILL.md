@@ -1,62 +1,95 @@
 ---
 name: xlayer-uniswap-intent-guard
-description: Policy-enforced X Layer swap guard. Use for safe agent swap execution with presets, simulation gate, strict allowlists, replay protection, budgets, and auditable reports.
-version: 1.0.0
+description: Real working SkillArena swap-guard for X Layer. Use for policy-enforced swaps with presets, simulation gate, strict DEX allowlists, replay protection, wallet risk budgets, MEV mode control, fallback execution, and auditable reports.
+version: 1.0.1
 ---
 
 # X Layer Uniswap Intent Execution Guard
 
-## Use when
-- Agent needs guarded swap execution on X Layer
-- You need deterministic pass/block decisions before swap
-- You need auditable outputs for judges/compliance
+Production-ready skill for safe agent swaps on X Layer.
 
-## Modes
-- **CLI**: `node dist/cli.js <intent.json>`
-- **SDK**: `runIntent(intent)` for app integration
+## When to use
+- User asks to swap tokens safely on X Layer
+- You need deterministic **PASS/BLOCK** decisions before execution
+- You need compliance/judge-friendly proofs (reports + tx links)
 
-## Mandatory pipeline
-1. Parse + apply preset (`safe|balanced|aggressive`)
-2. Quote fetch (`swap quote`)
-3. Guard evaluation (policy checks)
-4. Budget + replay checks
-5. Simulation gate (`swap swap` + `gateway simulate`)
-6. Execute (or dry-run)
-7. Persist report (`reports/*.json`)
+## Prerequisites
+1. `onchainos` installed and wallet logged in
+2. project dependencies installed
+3. intent JSON prepared
 
-## Policy checks
-- slippage, price impact, minUsdOut, maxNotionalUsd
-- routeCount, maxHops
-- dex allowlist + strict allowlist mode
-- token denylist
-- required quote fields
-- price deviation vs spot
-- from/to distinct
-
-## Governance checks
-- `intentId` replay protection
-- wallet daily notional cap
-- wallet daily tx-count cap
-
-## Execution controls
-- `mevMode`: `auto | force | off`
-- `fallbackExecution`: one bounded retry with faster gas
-- `simulateBeforeExecute`: hard gate on simulation
-
-## Demo commands
 ```bash
-npm run demo:safe
-npm run demo:unsafe
-npm run demo:all
+npm install
+npm run build
+onchainos wallet status
 ```
 
-## Proof artifacts
-- `PROOF.md`
-- `proof/live-swaps.json`
-- `proof/guard-safe-proof.json`
-- `proof/guard-unsafe-proof.json`
+## Quick start (CLI)
+```bash
+# safe dry-run (should pass)
+npm run demo:safe
 
-## Extension points
-- enforce Uniswap fee-tier constraints
-- add TWAP oracle source for stronger deviation checks
-- add webhook notifier for blocked intents
+# unsafe dry-run (should block)
+npm run demo:unsafe
+
+# custom intent
+node dist/cli.js examples/intent.safe.json
+```
+
+## SDK usage
+```ts
+import { runIntent } from "xlayer-uniswap-intent-guard";
+
+const { reportFile, report } = await runIntent({
+  intentId: "trade-001",
+  chain: "xlayer",
+  wallet: "0x...",
+  fromToken: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  toToken: "0x74b7f16337b8972027f6196a17a631ac6de26d22",
+  readableAmount: "0.001",
+  preset: "balanced",
+  dryRun: true
+});
+```
+
+## Execution pipeline (actual implementation)
+1. Parse input with `IntentSchema`
+2. Apply preset (`safe|balanced|aggressive`)
+3. Fetch quote via `onchainos swap quote`
+4. Evaluate guard checks (slippage, impact, routes, allowlist, etc.)
+5. Enforce replay protection (`intentId`) + daily wallet budgets
+6. Build calldata via `onchainos swap swap`
+7. Simulate via `onchainos gateway simulate` (if enabled)
+8. Execute via `onchainos swap execute` (or dry-run)
+9. Persist report JSON to `reports/*.json`
+
+## Guard features implemented
+- `maxSlippagePct`, `maxPriceImpactPct`
+- `minUsdOut`, `maxNotionalUsd`
+- `minRoutes`, `maxHops`
+- `requireDexAllowlist`, `strictDexAllowlist`
+- `denyTokens`
+- `requireQuoteFields`
+- `maxPriceDeviationPct`
+- `intentId` replay protection
+- `maxDailyNotionalUsd`, `maxDailyTxCount`
+- `mevMode` (`auto|force|off`)
+- `fallbackExecution`
+
+## Output artifacts
+- Runtime reports: `reports/*.json` (gitignored)
+- Static proofs:
+  - `PROOF.md`
+  - `proof/live-swaps.json`
+  - `proof/guard-safe-proof.json`
+  - `proof/guard-unsafe-proof.json`
+
+## README reference (how to use)
+For full installation, schema, CLI commands, SDK examples, and proofs, see:
+- `README.md`
+
+## Validation commands
+```bash
+npm test
+npm run demo:all
+```
