@@ -11,6 +11,9 @@ Intent-aware swap guard for X Layer.
 - minimum USD out
 - minimum route count (route sanity)
 - optional DEX allowlist check
+- token denylist
+- max notional USD cap
+- strict required quote fields
 - dry-run mode
 - optional MEV protection on execution
 
@@ -61,6 +64,9 @@ node dist/cli.js examples/intent.safe.json
   "minUsdOut": 5,
   "minRoutes": 1,
   "requireDexAllowlist": ["uniswap"],
+  "denyTokens": ["0xdead..."],
+  "maxNotionalUsd": 500,
+  "requireQuoteFields": ["slippage", "priceImpact", "usdOut"],
   "dryRun": true,
   "mevProtection": true
 }
@@ -73,6 +79,7 @@ Each run writes a judge-auditable report JSON under `reports/`:
 - intent
 - quote payload
 - pass/fail decision per check
+- computed `riskScore` (0-100)
 - execution output when executed
 
 ## Test

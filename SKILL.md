@@ -31,6 +31,9 @@ node dist/cli.js <intent.json>
 - `minUsdOut` (optional)
 - `minRoutes` (route sanity)
 - `requireDexAllowlist` (optional)
+- `denyTokens` (optional)
+- `maxNotionalUsd` (optional)
+- `requireQuoteFields` (strict quote completeness)
 
 If any check fails, command exits with code `2` and **does not execute**.
 

@@ -12,5 +12,11 @@
   "mevProtection": true,
   "requireDexAllowlist": [
     "uniswap"
-  ]
+  ],
+  "requireQuoteFields": [
+    "slippage",
+    "priceImpact",
+    "usdOut"
+  ],
+  "denyTokens": []
 }
